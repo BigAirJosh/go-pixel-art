@@ -4,8 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	"image/color"
 	_ "image/jpeg"
+	"image/png"
 	_ "image/png"
+	"math"
 	"os"
 )
 
@@ -17,8 +20,12 @@ func main() {
 	var pixelSize int
 
 	flag.StringVar(&inputFile, "i", "/home/bigairjosh/wallpapers/0001.jpg", "Specify input file path")
-	flag.StringVar(&outputFile, "o", "./pixelart.jpg", "Specify output file path")
-	flag.IntVar(&pixelSize, "s", 5, "the size of each pixel in pixels (which doesn't make sense yet agreed)")
+	flag.StringVar(&outputFile, "o", "./pixelart.png", "Specify output file path")
+	flag.IntVar(&pixelSize, "s", 25, "the size of each pixel in pixels (which doesn't make sense yet agreed)")
+
+	flag.Parse()
+
+	pixelSquare := float64(pixelSize * pixelSize)
 
 	fmt.Println("processing " + inputFile)
 
@@ -33,32 +40,48 @@ func main() {
 
 	fmt.Println(bounds)
 
-	var sumRed uint32
-	sumRed = 0
-	var sumGreen uint32
-	sumGreen = 0
-	var sumBlue uint32
-	sumBlue = 0
+	outputImage := image.NewRGBA(bounds)
 
-	var total uint32 = 0
+	for x := bounds.Min.X; x < bounds.Max.X; x += pixelSize {
+		for y := bounds.Min.Y; y < bounds.Max.Y; y += pixelSize {
 
-	for x := bounds.Min.X; x < bounds.Max.X; x++ {
-		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-			nextColour := inputImage.At(x, y)
-			r, g, b, _ := nextColour.RGBA()
-			sumRed += r
-			sumGreen += g
-			sumBlue += b
+			var sumR float64
+			var sumG float64
+			var sumB float64
 
-			total += 1
+			for px := x; px < x+pixelSize; px++ {
+				for py := y; py < y+pixelSize; py++ {
+
+					pixel := inputImage.At(px, py)
+					col := color.RGBAModel.Convert(pixel).(color.RGBA)
+
+					sumR += float64(col.R)
+					sumG += float64(col.G)
+					sumB += float64(col.B)
+				}
+			}
+
+			avgR := math.Round(sumR / pixelSquare)
+			avgG := math.Round(sumG / pixelSquare)
+			avgB := math.Round(sumB / pixelSquare)
+			// printColour(avgR, avgG, avgB, avgA)
+			pixelColour := color.RGBA{uint8(avgR), uint8(avgG), uint8(avgB), 0xff}
+
+			for px := x; px < x+pixelSize; px++ {
+				for py := y; py < y+pixelSize; py++ {
+					outputImage.Set(px, py, pixelColour)
+				}
+			}
 		}
 	}
 
-	avgR := sumRed / total
-	avgG := sumGreen / total
-	avgB := sumBlue / total
+	f, _ := os.Create(outputFile)
+	png.Encode(f, outputImage)
 
-	fmt.Printf("r:%dg:%db:%d", avgR, avgG, avgB)
+}
+
+func printColour(r uint32, g uint32, b uint32, a uint32) {
+	fmt.Printf("r:%dg:%db:%da:%d\n", r, g, b, a)
 }
 
 //todo move to lib
