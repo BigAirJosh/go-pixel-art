@@ -10,6 +10,8 @@ import (
 	_ "image/png"
 	"math"
 	"os"
+
+	"github.com/bigairjosh/pixelart/palette"
 )
 
 func main() {
@@ -18,14 +20,20 @@ func main() {
 	var inputFile string
 	var outputFile string
 	var pixelSize int
+	var colourPaletteFlag string
+	// #264653, #2a9d8f, #e9c46a, #f4a261, #e76f51
 
 	flag.StringVar(&inputFile, "i", "/home/bigairjosh/wallpapers/0001.jpg", "Specify input file path")
 	flag.StringVar(&outputFile, "o", "./pixelart.png", "Specify output file path")
 	flag.IntVar(&pixelSize, "s", 25, "the size of each pixel in pixels (which doesn't make sense yet agreed)")
+	flag.StringVar(&colourPaletteFlag, "c", "#264653, #2a9d8f, #e9c46a, #f4a261, #e76f51",
+		"colour palette in #hex format as csv string")
 
 	flag.Parse()
 
 	pixelSquare := float64(pixelSize * pixelSize)
+
+	colourPalette := palette.Parse(colourPaletteFlag)
 
 	fmt.Println("processing " + inputFile)
 
@@ -65,8 +73,8 @@ func main() {
 			avgG := math.Round(sumG / pixelSquare)
 			avgB := math.Round(sumB / pixelSquare)
 			// printColour(avgR, avgG, avgB, avgA)
-			pixelColour := color.RGBA{uint8(avgR), uint8(avgG), uint8(avgB), 0xff}
-
+			averageColour := color.RGBA{uint8(avgR), uint8(avgG), uint8(avgB), 0xff}
+			pixelColour := palette.Match(averageColour, colourPalette)
 			for px := x; px < x+pixelSize; px++ {
 				for py := y; py < y+pixelSize; py++ {
 					outputImage.Set(px, py, pixelColour)
@@ -80,10 +88,6 @@ func main() {
 
 }
 
-func printColour(r uint32, g uint32, b uint32, a uint32) {
-	fmt.Printf("r:%dg:%db:%da:%d\n", r, g, b, a)
-}
-
 //todo move to lib
 func getImageFromFilePath(filePath string) (image.Image, error) {
 	f, err := os.Open(filePath)
@@ -91,6 +95,24 @@ func getImageFromFilePath(filePath string) (image.Image, error) {
 		return nil, err
 	}
 	defer f.Close()
-	image, _, err := image.Decode(f)
-	return image, err
+	i, _, err := image.Decode(f)
+	return i, err
+}
+
+func ParseHexColor(s string) (c color.RGBA, err error) {
+	c.A = 0xff
+	switch len(s) {
+	case 7:
+		_, err = fmt.Sscanf(s, "#%02x%02x%02x", &c.R, &c.G, &c.B)
+	case 4:
+		_, err = fmt.Sscanf(s, "#%1x%1x%1x", &c.R, &c.G, &c.B)
+		// Double the hex digits:
+		c.R *= 17
+		c.G *= 17
+		c.B *= 17
+	default:
+		err = fmt.Errorf("invalid length, must be 7 or 4")
+
+	}
+	return
 }
