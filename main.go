@@ -7,7 +7,6 @@ import (
 	"image/color"
 	_ "image/jpeg"
 	"image/png"
-	_ "image/png"
 	"math"
 	"os"
 
