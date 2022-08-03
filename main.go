@@ -2,19 +2,20 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"image"
 	"image/color"
 	_ "image/jpeg"
 	"image/png"
+	"log"
 	"math"
 	"os"
 
 	"github.com/bigairjosh/pixelart/palette"
 )
 
+var verbose bool
+
 func main() {
-	fmt.Println("Pixelart Rocks!!!")
 
 	var inputFile string
 	var outputFile string
@@ -27,27 +28,27 @@ func main() {
 	flag.IntVar(&pixelSize, "s", 25, "the size of each pixel in pixels (which doesn't make sense yet agreed)")
 	flag.StringVar(&colourPaletteFlag, "c", "#264653, #2a9d8f, #e9c46a, #f4a261, #e76f51",
 		"colour palette in #hex format as csv string")
+	flag.BoolVar(&verbose, "v", false, "Verbose processing output")
 
 	flag.Parse()
 
-	pixelSquare := float64(pixelSize * pixelSize)
+	logIfVerbose("Pixelart coming up...")
 
 	colourPalette := palette.Parse(colourPaletteFlag)
 
-	fmt.Println("processing " + inputFile)
+	logIfVerbose("loading input file [", inputFile, "]")
 
 	inputImage, err := getImageFromFilePath(inputFile)
 
 	if err != nil {
-		fmt.Println("error loading image " + err.Error())
-		os.Exit(1)
+		log.Fatal("error loading image ", err.Error())
 	}
 
 	bounds := inputImage.Bounds()
 
-	fmt.Println(bounds)
-
 	outputImage := image.NewRGBA(bounds)
+
+	pixelSquare := float64(pixelSize * pixelSize)
 
 	for x := bounds.Min.X; x < bounds.Max.X; x += pixelSize {
 		for y := bounds.Min.Y; y < bounds.Max.Y; y += pixelSize {
@@ -82,12 +83,10 @@ func main() {
 		}
 	}
 
-	f, _ := os.Create(outputFile)
-	png.Encode(f, outputImage)
+	savePixelArt(outputFile, outputImage)
 
 }
 
-//todo move to lib
 func getImageFromFilePath(filePath string) (image.Image, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -98,20 +97,31 @@ func getImageFromFilePath(filePath string) (image.Image, error) {
 	return i, err
 }
 
-func ParseHexColor(s string) (c color.RGBA, err error) {
-	c.A = 0xff
-	switch len(s) {
-	case 7:
-		_, err = fmt.Sscanf(s, "#%02x%02x%02x", &c.R, &c.G, &c.B)
-	case 4:
-		_, err = fmt.Sscanf(s, "#%1x%1x%1x", &c.R, &c.G, &c.B)
-		// Double the hex digits:
-		c.R *= 17
-		c.G *= 17
-		c.B *= 17
-	default:
-		err = fmt.Errorf("invalid length, must be 7 or 4")
+func savePixelArt(outputFile string, outputImage image.Image) {
 
+	logIfVerbose("Saving output file [", outputFile, "]")
+
+	file, err := os.Create(outputFile)
+	if err != nil {
+		log.Fatal("Error creating output file [", outputFile, "] message [", err.Error(), "]")
 	}
-	return
+	defer file.Close()
+	err = png.Encode(file, outputImage)
+	if err != nil {
+		log.Fatal("Error creating output file [", outputFile, "] message [", err.Error(), "]")
+	}
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		log.Fatal("Error creating output file [", outputFile, "] message [", err.Error(), "]")
+	}
+	logIfVerbose("Saved [", fileInfo.Size(), "] bytes")
+
+}
+
+func logIfVerbose(v ...any) {
+
+	if verbose {
+		log.Println(v...)
+	}
 }

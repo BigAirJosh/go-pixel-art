@@ -11,10 +11,10 @@ A Go cli to convert image files into pixel art. Currently used to generate my wa
 ## Todo
 
 - [x] add colour palette matching
-- [ ] `-v` verbose flag
-- [ ] fix the odd green strip when the pixel sizes are big enough so the last one doesn't quite fit
-- [ ] obviously clean up the code :)
+- [x] `-v` verbose flag
+- [x] obviously clean up the code :) "at least a little bit"
 - [ ] remove the input and output defaults and cleanup the cli usage etc
+- [ ] fix the odd green strip when the pixel sizes are big enough so the last one doesn't quite fit
 
 
 ## Examples
